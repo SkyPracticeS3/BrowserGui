@@ -634,3 +634,12 @@ void Image::positionBasedOnParentRect(D2D1_RECT_F _rc){
 void Image::draw(ComPtr<ID2D1DeviceContext> ctx){
     ctx->DrawBitmap(bitmap.Get(), rc, 1.0f, D2D1_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC);
 }
+
+Image::Image(ComPtr<IWICImagingFactory> _factory, std::wstring source, int _x, int _y, int _w,
+    int _h,
+    float _border_rad, bool _has_border, float _border_weight): GuiElement(ImageElement), factory(_factory),
+    src(source), original_rc(_x, _y, _x + _w, _y + _h), border_radius(_border_rad), has_border(_has_border),
+    border_weight(_border_weight) {
+    rc = original_rc;
+    createDeviceInDependantResources();
+};

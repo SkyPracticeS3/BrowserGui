@@ -167,6 +167,9 @@ class Image : public GuiElement {
     float border_weight;
     std::wstring src;
 public:
+    Image(ComPtr<IWICImagingFactory> _factory, std::wstring source, int _x = 0.0f, int _y = 0.0f, int _w = 0.0f,
+        int _h = 0.0f,
+        float _border_rad = 0.0f, bool _has_border = false, float _border_weight = 0.0f);
     
     void setDimensions(float w, float h) override;
     void setLocation(float x, float y) override;
