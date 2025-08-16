@@ -119,44 +119,22 @@ D2D1_RECT_F Text::getRc(){
 D2D1_RECT_F Text::getOriginalRc(){
     return D2D1::Rect(original_x, original_y, original_x + max_width, original_y + max_height);
 }
-Box::Box(float _x, float _y, float _w, float _h, float _border_rad, bool _has_border, float _border_weight,  
+Box::Box(float _x, float _y, float _w, float _h, float _border_rad, Display displ, bool _has_border, float _border_weight,  
     D2D1_COLOR_F bk_clr, D2D1_COLOR_F border_clr): GuiElement(BoxElement),
     original_rc(_x, _y, _x + _w, _y + _h), border_radius(_border_rad), has_border(_has_border), border_weight(_border_weight), 
-    bk_color(bk_clr), border_color(border_clr){
+    bk_color(bk_clr), border_color(border_clr), display(displ){
     rc = original_rc;
 };
 
 void Box::setDimensions(float w, float h) {
-    original_rc.right = original_rc.left + w;
-    original_rc.bottom = original_rc.top + h;
-
-    rc.right = rc.right + w;
-    rc.bottom = rc.bottom = h;
+    setDim
 
 };
 // setMargin
 void Box::setLocation(float x, float y) {
-    float width = original_rc.right - original_rc.left;
-    float height = original_rc.bottom - original_rc.top;
+    setLoc
 
-    float old_left = original_rc.left;
-    float old_top = original_rc.top;
-
-    float x_diff = x - old_left;
-    float y_diff = y - old_top;
-
-    rc.left = (rc.left + x_diff);
-    rc.top = (rc.top + y_diff);
-    rc.right = rc.left + width;
-    rc.bottom = rc.top + height;
-
-    original_rc.left = x + width;
-    original_rc.top = y + height;
-    original_rc.right = original_rc.left + width;
-    original_rc.bottom = original_rc.top + height;
-
-    for(auto& child : children)
-        child->positionBasedOnParentRect(rc);
+    rePositionAllChildrenBasedOnDisplay();
 
 };
 void Box::applyChanges() {
@@ -204,6 +182,8 @@ void Box::positionBasedOnParentRect(D2D1_RECT_F _rc) {
     rc.top = _rc.top + original_rc.top; // parent y + top margin
     rc.bottom = rc.top + (original_rc.bottom - original_rc.top); // new y + height
     rc.right = rc.left + (original_rc.right - original_rc.left); // new x + width
+
+    rePositionAllChildrenBasedOnDisplay();
 }
 void Box::appendChild(std::shared_ptr<GuiElement> elm) {
     elm->positionBasedOnParentRect(rc);
@@ -211,14 +191,39 @@ void Box::appendChild(std::shared_ptr<GuiElement> elm) {
     if(display == Block){
         if(children.size() > 0){
             D2D1_RECT_F current_elm_rc = elm->getOriginalRc();
-            D2D1_RECT_F last_child_rc = children.back()->getOriginalRc();
-            elm->setLocation(current_elm_rc.left, current_elm_rc.top + last_child_rc.bottom);
+            D2D1_RECT_F last_child_rc = children.back()->getRc();
+            elm->setLocation(current_elm_rc.left, (last_child_rc.bottom - rc.top));
+        }
+    } else if (display == Flex){
+        if(children.size() > 0){
+            D2D1_RECT_F current_elm_rc = elm->getOriginalRc();
+            D2D1_RECT_F last_child_rc = children.back()->getRc();
+            elm->setLocation((last_child_rc.right - rc.left), current_elm_rc.top);
         }
     }
 
     children.push_back(elm);
     
 
+};
+void Box::rePositionAllChildrenBasedOnDisplay() {
+    for(int i = 0; i < children.size(); i++){
+        auto& child = children[i];
+        child->positionBasedOnParentRect(rc);
+        if(display == Block){
+            if(i > 0){
+                D2D1_RECT_F current_elm_rc = child->getOriginalRc();
+                D2D1_RECT_F last_child_rc = children[i - 1]->getRc();
+                child->setLocation(current_elm_rc.left, (last_child_rc.bottom - rc.top));
+            }
+        } else if (display == Flex){
+            if(i > 0){
+                D2D1_RECT_F current_elm_rc = child->getOriginalRc();
+                D2D1_RECT_F last_child_rc = children[i - 1]->getRc();
+                child->setLocation((last_child_rc.right - rc.left), current_elm_rc.top);
+            }
+        }
+    }
 };
 D2D1_RECT_F Box::getRc(){
     return rc;
@@ -234,7 +239,7 @@ Button::Button(ComPtr<IDWriteFactory> factory, float _x, float _y, float _w,
     DWRITE_FONT_WEIGHT _font_weight, bool _is_italic,
     float _border_radius, D2D1_COLOR_F _bk_clr,
     D2D1_COLOR_F _border_clr, D2D1_COLOR_F _txt_clr):
-    GuiElement(ButtonElement), d_write_factory(factory), original_rc(_x, _y, _x + _w, _y + _h),
+    GuiElement(ButtonElement), d_write_factory(factory), original_rc(_x + _border_weight, _y + _border_weight, _x + (_border_weight * 2) + _w, _y + (_border_weight * 2) + _h),
     font_weight(_font_weight), font_style(_is_italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL),
     font_stretch(DWRITE_FONT_STRETCH_NORMAL), bk_clr(_bk_clr), txt_clr(_txt_clr), border_clr(_border_clr),
     font_size(_font_size), font_family(std::move(_font_family)), str(std::move(_str)),
@@ -266,33 +271,12 @@ void Button::setFontSize(float _font_size) {
 };
 
 void Button::setDimensions(float w, float h) {
-    original_rc.right = original_rc.left + w;
-    original_rc.bottom = original_rc.top + h;
-
-    rc.right = rc.left + w;
-    rc.bottom = rc.top + h;
+    setDim
 
     createDeviceInDependantResources();
 };
 void Button::setLocation(float x, float y) {
-    float width = original_rc.right - original_rc.left;
-    float height = original_rc.bottom - original_rc.top;
-
-    float old_left = original_rc.left;
-    float old_top = original_rc.top;
-
-    float x_diff = x - old_left;
-    float y_diff = y - old_top;
-
-    rc.left = (rc.left + x_diff);
-    rc.top = (rc.top + y_diff);
-    rc.right = rc.left + width;
-    rc.bottom = rc.top + height;
-
-    original_rc.left = x + width;
-    original_rc.top = y + height;
-    original_rc.right = original_rc.left + width;
-    original_rc.bottom = original_rc.top + height;
+    setLoc
 };
 
 void Button::setTextColor(D2D1_COLOR_F clr) {
@@ -372,7 +356,7 @@ Input::Input(ComPtr<IDWriteFactory> factory, float _x, float _y, float _w,
     float _border_radius, D2D1_COLOR_F _bk_clr,
     D2D1_COLOR_F _border_clr, D2D1_COLOR_F _txt_clr, bool _auto_caret_height, size_t _caret_height,
     float _padding_left, bool _is_centered_horizontally): GuiElement(InputElement), 
-    original_rc(_x, _y, _x + _w, _y + _h), str(std::move(_str)), font_family(std::move(_font_family)),
+    original_rc(_x + _border_weight, _y + _border_weight, _x + (_border_weight * 2) + _w, _y + (_border_weight * 2) + _h), str(std::move(_str)), font_family(std::move(_font_family)),
     font_size(_font_size), has_border(_has_border), border_weight(_border_weight),
     font_style(_is_italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL), border_radius(_border_radius),
     bk_clr(_bk_clr), border_clr(_border_clr), txt_clr(_txt_clr), auto_caret_height(_auto_caret_height),
@@ -402,33 +386,12 @@ void Input::setFontSize(float _font_size) {
     createDeviceInDependantResources();
 };
 void Input::setDimensions(float w, float h) {
-    original_rc.right = original_rc.left + w;
-    original_rc.bottom = original_rc.top + h;
-
-    rc.right = rc.left + w;
-    rc.bottom = rc.top + h;
+    setDim
     
     createDeviceInDependantResources();
 };
 void Input::setLocation(float x, float y) {
-    float width = original_rc.right - original_rc.left;
-    float height = original_rc.bottom - original_rc.top;
-
-    float old_left = original_rc.left;
-    float old_top = original_rc.top;
-
-    float x_diff = x - old_left;
-    float y_diff = y - old_top;
-
-    rc.left = (rc.left + x_diff);
-    rc.top = (rc.top + y_diff);
-    rc.right = rc.left + width;
-    rc.bottom = rc.top + height;
-
-    original_rc.left = x + width;
-    original_rc.top = y + height;
-    original_rc.right = original_rc.left + width;
-    original_rc.bottom = original_rc.top + height;
+    setLoc
 };
 
 void Input::setTextColor(D2D1_COLOR_F clr) { txt_clr = clr; recreate_device_resources = true; };
@@ -574,16 +537,16 @@ void Input::setCaretPosByHitTest(POINT pos) {
 
 void Image::createDeviceInDependantResources() {
     ComPtr<IWICBitmapDecoder> decoder;
-    factory->CreateDecoderFromFilename(src.c_str(), NULL, GENERIC_READ, WICDecodeMetadataCacheOnDemand,
+    HRESULT hr = factory->CreateDecoderFromFilename(src.c_str(), NULL, GENERIC_READ, WICDecodeMetadataCacheOnDemand,
         &decoder);
     ComPtr<IWICBitmapFrameDecode> frame_decode;
     decoder->GetFrame(0, &frame_decode);
     factory->CreateFormatConverter(&conv);
-    conv->Initialize(frame_decode.Get(), GUID_WICPixelFormat32bppBGRA,
+    conv->Initialize(frame_decode.Get(), GUID_WICPixelFormat32bppPBGRA,
         WICBitmapDitherTypeNone, nullptr , 1.0, WICBitmapPaletteTypeMedianCut);
 };
 void Image::createDeviceResources(ComPtr<ID2D1DeviceContext> ctx) {
-    if(!bitmap || recreate_device_resources)
+    if((!bitmap || recreate_device_resources) && conv)
         ctx->CreateBitmapFromWicBitmap(conv.Get(), &bitmap);
 };
 D2D1_RECT_F Image::getRc() {
@@ -595,51 +558,29 @@ D2D1_RECT_F Image::getOriginalRc() {
 
 
 void Image::setDimensions(float w, float h) {
-    original_rc.right = original_rc.left + w;
-    original_rc.bottom = original_rc.top + h;
-
-    rc.right = rc.right + w;
-    rc.bottom = rc.bottom = h;
-
+    setDim
 };
 // setMargin
 void Image::setLocation(float x, float y) {
-    float width = original_rc.right - original_rc.left;
-    float height = original_rc.bottom - original_rc.top;
-
-    float old_left = original_rc.left;
-    float old_top = original_rc.top;
-
-    float x_diff = x - old_left;
-    float y_diff = y - old_top;
-
-    rc.left = (rc.left + x_diff);
-    rc.top = (rc.top + y_diff);
-    rc.right = rc.left + width;
-    rc.bottom = rc.top + height;
-
-    original_rc.left = x + width;
-    original_rc.top = y + height;
-    original_rc.right = original_rc.left + width;
-    original_rc.bottom = original_rc.top + height;
+    setLoc   
 }
-
 void Image::positionBasedOnParentRect(D2D1_RECT_F _rc){
-    rc.left = _rc.left + original_rc.left; // parent x + left margin
-    rc.top = _rc.top + original_rc.top; // parent y + top margin
-    rc.bottom = rc.top + (original_rc.bottom - original_rc.top); // new y + height
-    rc.right = rc.left + (original_rc.right - original_rc.left); // new x + width   
+    posBasedOnParent
 }
 
 void Image::draw(ComPtr<ID2D1DeviceContext> ctx){
+    createDeviceResources(ctx);
+    if(bitmap)
     ctx->DrawBitmap(bitmap.Get(), rc, 1.0f, D2D1_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC);
 }
 
 Image::Image(ComPtr<IWICImagingFactory> _factory, std::wstring source, int _x, int _y, int _w,
     int _h,
     float _border_rad, bool _has_border, float _border_weight): GuiElement(ImageElement), factory(_factory),
-    src(source), original_rc(_x, _y, _x + _w, _y + _h), border_radius(_border_rad), has_border(_has_border),
+    src(source), original_rc(_x + _border_weight, _y + _border_weight, _x + (_border_weight * 2) + _w, _y + (_border_weight * 2) + _h), border_radius(_border_rad), has_border(_has_border),
     border_weight(_border_weight) {
     rc = original_rc;
+    if(_factory){ 
+    }
     createDeviceInDependantResources();
 };

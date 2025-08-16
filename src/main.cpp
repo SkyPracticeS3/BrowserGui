@@ -1,4 +1,5 @@
 #include"Windowing/MyWindow.h"
+#include <combaseapi.h>
 #include <winuser.h>
 
 #pragma comment (lib, "d2d1.lib")
@@ -9,6 +10,7 @@
 #pragma comment (lib, "WindowsCodecs.lib")
 
 INT WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, INT){
+    CoInitialize(NULL);
     MyWindow window;
     window.createWindow(L"hello", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         50, 50, 500, 500, NULL, NULL);
@@ -18,4 +20,5 @@ INT WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, INT){
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+    CoUninitialize();
 }

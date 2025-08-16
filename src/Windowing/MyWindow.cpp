@@ -10,21 +10,38 @@ LRESULT WINAPI MyWindow::handleMessage(UINT msg, WPARAM wp, LPARAM lp) {
         case WM_CREATE:
         {
             renderer = std::make_unique<GraphicsRenderer>(m_hwnd);
-            dom = std::make_shared<Box>(50, 50, 200, 300, 15, true, 1.0f, D2D1::ColorF(D2D1::ColorF::Brown), D2D1::ColorF(D2D1::ColorF::White));
-            dom->to<Box>()->appendChild(std::make_shared<Text>(
-                renderer->graphics.d_write_factory, L"hello", 50
+            dom = std::make_shared<Box>(100, 100, 1000, 200, 15, Block, true, 1.0f, D2D1::ColorF(D2D1::ColorF::Brown), D2D1::ColorF(D2D1::ColorF::White));
+            // dom->to<Box>()->appendChild(std::make_shared<Text>(
+            //     renderer->graphics.d_write_factory, L"hello", 50
+            // ));
+            // dom->to<Box>()->appendChild(std::make_shared<Text>(
+            //     renderer->graphics.d_write_factory, L"hdssdello", 50
+            // ));
+            // dom->to<Box>()->appendChild(std::make_shared<Button>(
+            //     renderer->graphics.d_write_factory
+            // ));
+            // dom->to<Box>()->children[2]->to<Button>()->signal_clicked().connect([](){
+            //     MessageBoxW(NULL, L"dsds", L"", MB_OK);
+            // });
+            // dom->to<Box>()->appendChild(std::make_shared<Input>(renderer->graphics.d_write_factory));
+            // dom->to<Box>()->appendChild(std::make_shared<Image>(renderer->graphics.wic_factory, L"Axe.png", 0, 0, 50, 50));
+            
+            auto domer = std::make_shared<Box>(0, 0, 1000, 100, 15, Flex, true, 1.0f, D2D1::ColorF(D2D1::ColorF::Yellow), D2D1::ColorF(D2D1::ColorF::White));
+            domer->to<Box>()->appendChild(std::make_shared<Text>(
+                renderer->graphics.d_write_factory, L"hello"
             ));
-            dom->to<Box>()->appendChild(std::make_shared<Text>(
-                renderer->graphics.d_write_factory, L"hdssdello", 50
+            domer->to<Box>()->appendChild(std::make_shared<Text>(
+                renderer->graphics.d_write_factory, L"hdssdello"
             ));
-            dom->to<Box>()->appendChild(std::make_shared<Button>(
+            domer->to<Box>()->appendChild(std::make_shared<Button>(
                 renderer->graphics.d_write_factory
             ));
-            dom->to<Box>()->children[2]->to<Button>()->signal_clicked().connect([](){
+            domer->to<Box>()->children[2]->to<Button>()->signal_clicked().connect([](){
                 MessageBoxW(NULL, L"dsds", L"", MB_OK);
             });
-            dom->to<Box>()->appendChild(std::make_shared<Input>(renderer->graphics.d_write_factory));
-
+            domer->to<Box>()->appendChild(std::make_shared<Input>(renderer->graphics.d_write_factory));
+            domer->to<Box>()->appendChild(std::make_shared<Image>(renderer->graphics.wic_factory, L"Axe.png", 0, 0, 50, 50));
+            dom->to<Box>()->appendChild(domer);
         }
         break;
         case WM_SIZE:

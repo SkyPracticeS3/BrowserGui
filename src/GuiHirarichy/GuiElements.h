@@ -14,6 +14,31 @@
 #include <wincodec.h>
 #include <string>
 
+#define setDim original_rc.right = original_rc.left + w;\
+    original_rc.bottom = original_rc.top + h;\
+    rc.right = rc.left + w;\
+    rc.bottom = rc.top + h;\
+
+#define setLoc float width = original_rc.right - original_rc.left;\
+    float height = original_rc.bottom - original_rc.top;\
+    float old_left = original_rc.left;\
+    float old_top = original_rc.top;\
+    float x_diff = x - old_left;\
+    float y_diff = y - old_top;\
+    rc.left = (rc.left + x_diff);\
+    rc.top = (rc.top + y_diff);\
+    rc.right = rc.left + width;\
+    rc.bottom = rc.top + height;\
+    original_rc.left = x;\
+    original_rc.top = y;\
+    original_rc.right = original_rc.left + width;\
+    original_rc.bottom = original_rc.top + height;
+
+#define posBasedOnParent rc.left = _rc.left + original_rc.left; \
+    rc.top = _rc.top + original_rc.top; \
+    rc.bottom = rc.top + (original_rc.bottom - original_rc.top); \
+    rc.right = rc.left + (original_rc.right - original_rc.left);   
+
 using Microsoft::WRL::ComPtr;
 
 enum ElementType {
@@ -54,7 +79,6 @@ public:
     virtual void setDimensions(float w, float h) = 0;
     virtual void setLocation(float x, float y) = 0;
 
-    virtual void applyChanges() = 0;
     template<typename T>
     T* to(){
         return dynamic_cast<T*>(this);
@@ -81,6 +105,7 @@ class Text : public GuiElement {
     bool auto_height;
     ComPtr<ID2D1SolidColorBrush> txt_brush;
 public:
+
     std::wstring text;
 
     Text(ComPtr<IDWriteFactory> _d_write_factory, std::wstring txt = L"", float _font_size = 20,
@@ -99,7 +124,7 @@ public:
     
     void setTextColor(D2D1_COLOR_F clr);
 
-    void applyChanges() override;
+    void applyChanges();
 
     void createDeviceInDependantResources() override;
     void createDeviceResources(ComPtr<ID2D1DeviceContext> ctx) override;
@@ -122,12 +147,12 @@ class Box : public GuiElement {
     D2D1_COLOR_F border_color;
     bool has_border;
     float border_weight;
-    Display display = Block;
+    Display display;
 public:
 
     std::vector<std::shared_ptr<GuiElement>> children;
 
-    Box(float _x = 0.0f, float _y = 0.0f, float _w = 0.0f, float _h = 0.0f, float _border_rad = 0.0f,
+    Box(float _x = 0.0f, float _y = 0.0f, float _w = 0.0f, float _h = 0.0f, float _border_rad = 0.0f, Display displ = Block,
         bool _has_border = false, float _border_weight = 0.0f,  
         D2D1_COLOR_F bk_clr = D2D1::ColorF(0.0f, 0.0f, 0.0f), D2D1_COLOR_F border_clr = 
             D2D1::ColorF(0.0f, 0.0f, 0.0f));
@@ -135,7 +160,7 @@ public:
     void setDimensions(float w, float h) override;
     void setLocation(float x, float y) override;
 
-    void applyChanges() override;
+    void applyChanges();
 
     void setBorderColor(D2D1_COLOR_F _clr);
     void setBkColor(D2D1_COLOR_F _clr);
@@ -148,6 +173,7 @@ public:
     void appendChild(std::shared_ptr<GuiElement> elm);
 
     void positionBasedOnParentRect(D2D1_RECT_F rc) override;
+    void rePositionAllChildrenBasedOnDisplay();
 
     std::vector<std::shared_ptr<GuiElement>> reverseFlatten() override;
     void reverseFlattenRecurse(std::vector<std::shared_ptr<GuiElement>>& result_elms) override;
@@ -156,7 +182,26 @@ public:
     D2D1_RECT_F getOriginalRc() override;
 };
 
-class Image : public GuiElement {
+class BasicPositioningManager {
+protected:
+    D2D1_RECT_F original_rc;
+    D2D1_RECT_F rc;
+public:
+    BasicPositioningManager(D2D1_RECT_F org_rc): original_rc(org_rc) {
+        rc = original_rc;
+    };
+
+    void setBoxDimensions(float w, float h);
+    void setBoxLocation(float x, float y);
+
+    void positionBoxBasedOnParentRect(D2D1_RECT_F rc);
+
+    D2D1_RECT_F getRc();
+    D2D1_RECT_F getOriginalRc();
+
+};
+
+class Image :  public GuiElement {
     ComPtr<ID2D1Bitmap> bitmap;
     ComPtr<IWICFormatConverter> conv;
     ComPtr<IWICImagingFactory> factory;
@@ -241,7 +286,7 @@ public:
     void setBkColor(D2D1_COLOR_F clr);
     void setBorderColor(D2D1_COLOR_F clr);
 
-    void applyChanges() override;
+    void applyChanges();
 
     Event<>& signal_clicked();
 
@@ -337,7 +382,7 @@ public:
     void setBkColor(D2D1_COLOR_F clr);
     void setBorderColor(D2D1_COLOR_F clr);
 
-    void applyChanges() override;
+    void applyChanges();
 
     Event<>& signal_clicked();
     Event<unsigned long long>& signal_keyboard();
